@@ -24,9 +24,15 @@ type Issue = {
   votes: number;
   status: string;
   image_path: string;
+  priority: number;
+  repair_verified: number;
+repair_confidence: number;
 };
 export default function IssueMap() {
   const [issues, setIssues] = useState<Issue[]>([]);
+  const [recommendations, setRecommendations] = useState<any>({});
+  const [repairFiles, setRepairFiles] = useState<any>({});
+  const [repairResults, setRepairResults] = useState<any>({});
 
   useEffect(() => {
     fetchIssues();
@@ -76,6 +82,43 @@ export default function IssueMap() {
       console.log(err);
     }
   };
+  const fetchRecommendation = async (id: number) => {
+  try {
+    const res = await axios.get(
+      `http://127.0.0.1:8000/recommendation/${id}`
+    );
+
+    setRecommendations((prev) => ({
+      ...prev,
+      [id]: res.data.recommendation,
+    }));
+  } catch (err) {
+    console.log(err);
+  }
+};
+const verifyRepair = async (id: number) => {
+  if (!repairFiles[id]) {
+    alert("Please choose an after-repair image first.");
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append("file", repairFiles[id]);
+
+  try {
+    const res = await axios.post(
+      `http://127.0.0.1:8000/verify-repair/${id}`,
+      formData
+    );
+
+    setRepairResults((prev: any) => ({
+      ...prev,
+      [id]: res.data.analysis,
+    }));
+  } catch (err) {
+    console.log(err);
+  }
+};
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -92,7 +135,25 @@ export default function IssueMap() {
         return "#9ca3af";
     }
   };
+const totalIssues = issues.length;
 
+const highPriority = issues.filter(
+  (i) => i.priority >= 120
+).length;
+
+const resolved = issues.filter(
+  (i) => i.status === "Resolved"
+).length;
+
+const avgConfidence =
+  issues.length > 0
+    ? Math.round(
+        issues.reduce(
+          (sum, i) => sum + i.confidence,
+          0
+        ) / issues.length
+      )
+    : 0;
   return (
     <div style={{ marginTop: "30px" }}>
       <h2
@@ -103,6 +164,193 @@ export default function IssueMap() {
       >
         🗺️ Live Civic Issue Map
       </h2>
+<div
+  style={{
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))",
+    gap: "18px",
+    marginBottom: "25px",
+  }}
+>
+
+  <div
+    style={{
+      background: "#2563eb",
+      color: "white",
+      borderRadius: "18px",
+      padding: "22px",
+      textAlign: "center",
+    }}
+  >
+    <h1>{totalIssues}</h1>
+    <p>📍 Total Issues</p>
+  </div>
+
+  <div
+    style={{
+      background: "#dc2626",
+      color: "white",
+      borderRadius: "18px",
+      padding: "22px",
+      textAlign: "center",
+    }}
+  >
+    <h1>{highPriority}</h1>
+    <p>🚨 High Priority</p>
+  </div>
+
+  <div
+    style={{
+      background: "#16a34a",
+      color: "white",
+      borderRadius: "18px",
+      padding: "22px",
+      textAlign: "center",
+    }}
+  >
+    <h1>{resolved}</h1>
+    <p>✅ Resolved</p>
+  </div>
+
+  <div
+    style={{
+      background: "#7c3aed",
+      color: "white",
+      borderRadius: "18px",
+      padding: "22px",
+      textAlign: "center",
+    }}
+  >
+    <h1>{avgConfidence}%</h1>
+    <p>🧠 AI Confidence</p>
+  </div>
+
+</div>      
+<div
+  style={{
+    background: "#111827",
+    color: "white",
+    padding: "22px",
+    borderRadius: "18px",
+    marginBottom: "20px",
+    boxShadow: "0 10px 30px rgba(0,0,0,0.35)",
+  }}
+>
+  <h2
+    style={{
+      marginBottom: "18px",
+      textAlign: "center",
+    }}
+  >
+    🚨 AI Priority Dashboard
+  </h2>
+
+  {[...issues]
+    .sort((a, b) => b.priority - a.priority)
+    .slice(0, 5)
+    .map((issue) => {
+      let color = "#22c55e";
+      let label = "Low";
+
+      if (issue.priority >= 140) {
+        color = "#ef4444";
+        label = "Critical";
+      } else if (issue.priority >= 120) {
+        color = "#f97316";
+        label = "High";
+      } else if (issue.priority >= 100) {
+        color = "#eab308";
+        label = "Medium";
+      }
+
+      return (
+        <div
+          key={issue.id}
+          style={{
+            marginBottom: "18px",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              marginBottom: "8px",
+            }}
+          >
+            <div>
+              <div
+                style={{
+                  fontWeight: "bold",
+                  fontSize: "16px",
+                }}
+              >
+                {issue.issue === "road damage"
+  ? "🛣️ Road Damage"
+  : issue.issue === "garbage"
+  ? "🗑️ Garbage"
+  : issue.issue === "water leakage"
+  ? "💧 Water Leakage"
+  : issue.issue === "broken streetlight"
+  ? "💡 Broken Streetlight"
+  : `📍 ${issue.issue}`}
+              </div>
+
+              <div
+                style={{
+                  fontSize: "13px",
+                  color: "#9ca3af",
+                }}
+              >
+                Confidence: {issue.confidence}% • 👍 {issue.votes} Votes
+              </div>
+            </div>
+
+            <span
+              style={{
+                background: color,
+                color: "white",
+                padding: "5px 12px",
+                borderRadius: "10px",
+                fontWeight: "bold",
+              }}
+            >
+              {label}
+            </span>
+          </div>
+
+          <div
+            style={{
+              width: "100%",
+              height: "10px",
+              background: "#374151",
+              borderRadius: "10px",
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                width: `${Math.min(issue.priority, 150) / 1.5}%`,
+                height: "100%",
+                background: color,
+                transition: "0.4s",
+              }}
+            />
+          </div>
+
+          <div
+            style={{
+              marginTop: "6px",
+              textAlign: "right",
+              fontSize: "13px",
+              color: "#d1d5db",
+            }}
+          >
+            AI Score: <b>{issue.priority}</b>
+          </div>
+        </div>
+      );
+    })}
+</div>
 
       <MapContainer
         center={[13.0827, 80.2707]}
@@ -124,8 +372,36 @@ export default function IssueMap() {
             position={[issue.latitude, issue.longitude]}
             icon={defaultIcon}
           >
-          
+                  
 <Popup>
+  <button onClick={() => fetchRecommendation(issue.id)}>
+  🤖 Get AI Recommendation
+</button>
+<div style={{ marginTop: "10px", background: "#111827", padding: "10px", borderRadius: "10px" }}>
+  {recommendations[issue.id] && (
+  <div
+    style={{
+      marginTop: "10px",
+      background: "#111827",
+      color: "white",
+      padding: "12px",
+      borderRadius: "10px",
+    }}
+  >
+    <h4>🤖 AI Recommendation</h4>
+
+    <p><b>Department:</b> {recommendations[issue.id].department}</p>
+
+    <p><b>Action:</b> {recommendations[issue.id].recommended_action}</p>
+
+    <p><b>Urgency:</b> {recommendations[issue.id].urgency}</p>
+
+    <p><b>Estimated Time:</b> {recommendations[issue.id].estimated_time}</p>
+
+    <p><b>Citizen Advice:</b> {recommendations[issue.id].citizen_advice}</p>
+  </div>
+)}
+</div>
   {issue.image_path && (
     <img
       src={`http://127.0.0.1:8000/${issue.image_path}`}
@@ -200,6 +476,48 @@ export default function IssueMap() {
       Resolve
     </button>
   </div>
+  <input
+  type="file"
+  accept="image/*"
+  onChange={(e) =>
+    setRepairFiles((prev: any) => ({
+      ...prev,
+      [issue.id]: e.target.files?.[0],
+    }))
+  }
+/>
+
+<button
+  onClick={() => verifyRepair(issue.id)}
+>
+  🤖 Verify Repair
+</button>
+{repairResults[issue.id] && (
+  <div
+    style={{
+      marginTop: "10px",
+      background: "#111827",
+      color: "white",
+      padding: "10px",
+      borderRadius: "8px",
+    }}
+  >
+    <p>
+      <b>Status:</b>{" "}
+      {repairResults[issue.id].repair_status}
+    </p>
+
+    <p>
+      <b>Confidence:</b>{" "}
+      {repairResults[issue.id].confidence}%
+    </p>
+
+    <p>
+      <b>Reason:</b>{" "}
+      {repairResults[issue.id].reason}
+    </p>
+  </div>
+)}
 </Popup>
 
           </Marker>
