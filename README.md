@@ -1,4 +1,12 @@
-# 🛡️ SentinelAI – Hyperlocal Civic Intelligence Platform
+# 🛡️ SentinelAI
+
+AI-Powered Hyperlocal Civic Intelligence Platform
+
+![Python](https://img.shields.io/badge/Python-3.11-blue)
+![FastAPI](https://img.shields.io/badge/FastAPI-Backend-green)
+![React](https://img.shields.io/badge/React-Frontend-61DAFB)
+![Gemini AI](https://img.shields.io/badge/Google-Gemini_AI-orange)
+![MySQL](https://img.shields.io/badge/MySQL-Database-blue)
 
 ## Overview
 
